@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<!-- class="no-js" снимается первым же действием скрипта.
+     Пока он на месте — витрина пустая и показана подсказка
+     «включи JavaScript»: без скрипта товаров просто неоткуда взять. -->
+<html lang="ru" class="no-js">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Кофейный этаж — кофейный магазин</title>
+  <meta name="description" content="Кофейня «Кофейный этаж»: зёрна, чай, посуда и инвентарь для бариста. Фильтры, поиск и корзина, которая переживает перезагрузку страницы." />
+
+  <!-- Иконка вкладки — маленький SVG прямо в коде, без внешних файлов.
+       Фон кремовый, зерно — терракотовое: те же цвета, что на странице -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%23b5461f'/><ellipse cx='50' cy='50' rx='27' ry='33' transform='rotate(-24 50 50)' fill='none' stroke='%23fff8f2' stroke-width='7'/><path d='M58 22c-9 15-9 41 0 56' fill='none' stroke='%23fff8f2' stroke-width='7' stroke-linecap='round'/></svg>" />
+
+  <!-- Шрифты с Google Fonts. Все три с кириллицей.
+       Если интернета нет — сработают системные из :root в style.css -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&family=Lora:wght@600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+  <!-- Ссылка для клавиатуры: первая по Tab, видна только при фокусе.
+       Нужна, чтобы не проходить всю шапку каждый раз. -->
+  <a class="skip-link" href="#catalog">К каталогу</a>
+
+  <!-- =========================================================
+       ШАПКА
+       ========================================================= -->
+  <header class="header">
+    <div class="header__inner">
+
+      <a href="#" class="header__logo">
+        <span class="header__logo-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <ellipse cx="12" cy="12" rx="6.5" ry="8" transform="rotate(-24 12 12)"/>
+            <path d="M14.8 5.4c-3 4.6-3 9 0 13.2"/>
+          </svg>
+        </span>
+        <span>Кофейный этаж</span>
+      </a>
+
+      <!-- Кнопка корзины. Счётчик живёт внутри неё, а не рядом:
+           так он не может «отвалиться» от кнопки при вёрстке. -->
+      <button
+        class="cart-btn"
+        id="cartBtn"
+        type="button"
+        aria-haspopup="dialog"
+        aria-controls="cart"
+        aria-label="Открыть корзину"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M3 4h2.2l2.3 11.2a1.6 1.6 0 0 0 1.6 1.3h8.7a1.6 1.6 0 0 0 1.6-1.2L21 8H6"/>
+          <circle cx="10" cy="20" r="1.2"/>
+          <circle cx="18" cy="20" r="1.2"/>
+        </svg>
+        <span class="cart-btn__count" id="cartCount" data-empty="true">0</span>
+      </button>
+
+    </div>
+  </header>
+
+
+  <main class="main">
+
+    <!-- =======================================================
+         ЗАГОЛОВОК ВИТРИНЫ
+         ======================================================= -->
+    <section class="intro">
+      <div class="container">
+        <span class="intro__label">кофе · чай · посуда</span>
+        <h1 class="intro__title">Всё для хорошего кофе</h1>
+        <p class="intro__text">
+          Зёрна, чай и посуда для бариста. Выбери категорию для себя.
+        </p>
+      </div>
+    </section>
+
+
+    <!-- =======================================================
+         ФИЛЬТРЫ
+         Категории и товары приходят из массива в script.js,
+         поэтому разметка здесь — только сам фильтр: подсказки
+         и контролы, которые всегда на месте.
+         ======================================================= -->
+    <section class="toolbar" id="catalog">
+      <div class="container toolbar__inner">
+
+        <!-- Поиск стоит своей строкой по центру: это главный
+             способ найти нужный товар, и он не должен теряться
+             между категориями и сортировкой. type="search" даёт
+             штатную кнопку очистки на мобильных — не пришлось
+             рисовать свою. -->
+        <div class="search">
+          <label class="search__label" for="search">Поиск</label>
+          <input
+            class="search__input"
+            id="search"
+            type="search"
+            placeholder="название товара"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="toolbar__row">
+          <div class="toolbar__group">
+            <span class="toolbar__label" id="catLabel">Категория</span>
+            <!-- Кнопки категорий строит скрипт по данным каталога.
+                 Оборачиваем в группу с role, чтобы скринридер
+                 объявил их одним блоком. -->
+            <div class="chips" id="categories" role="group" aria-labelledby="catLabel"></div>
+          </div>
+
+          <div class="toolbar__group">
+            <span class="toolbar__label" id="sortLabel">Сортировка</span>
+            <div class="select" id="sort">
+              <button
+                class="select__control"
+                id="sortBtn"
+                type="button"
+                aria-haspopup="listbox"
+                aria-expanded="false"
+                aria-labelledby="sortLabel sortValue"
+              >
+                <span id="sortValue">по популярности</span>
+                <svg class="select__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                  <path d="M6 9l6 6 6-6"/>
+                </svg>
+              </button>
+
+              <!-- Список свой, а не системный: раскрытое меню у
+                   <select> рисует операционная система, и оформить
+                   его под магазин невозможно — ни цветом, ни
+                   шрифтом, ни рамкой. Варианты ставит скрипт из
+                   объекта SORTS, поэтому новый режим сортировки
+                   появляется здесь сам -->
+              <div class="select__list" id="sortList" role="listbox" aria-labelledby="sortLabel" hidden></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- =======================================================
+         СЕТКА ТОВАРОВ
+         Пустая в разметке: карточки рисует скрипт из массива
+         товаров. Дублировать их в HTML — значит держать список
+         в двух местах и обязательно где-то ошибиться.
+         ======================================================= -->
+    <!-- Класс catalog нужен фоновому снимку за сеткой. Сама
+         секция прозрачная: картинка лежит отдельным слоем,
+         а товары просто стоят поверх неё -->
+    <section class="container catalog">
+      <p class="result-line" id="resultLine" role="status" aria-live="polite"></p>
+
+      <div class="grid" id="grid"></div>
+
+      <!-- Показывается, когда фильтры ничего не нашли -->
+      <div class="empty" id="empty" hidden>
+        <p class="empty__title">Ничего не нашлось</p>
+        <p class="empty__text">
+          Попробуй другую категорию или сбрось поиск.
+        </p>
+      </div>
+
+      <!-- Видно только пока включён класс no-js: без скрипта
+           каталог пуст, и надо честно об этом сказать -->
+      <p class="nojs-note">
+        Для каталога нужен JavaScript — данные о товарах лежат в script.js.
+      </p>
+    </section>
+
+  </main>
+
+
+  <!-- =========================================================
+       КОРЗИНА — выезжающая панель справа
+       role="dialog": панель перехватывает фокус и закрывается
+       по Escape — без этого с клавиатуры она недоступна.
+       ========================================================= -->
+  <div class="cart" id="cart" role="dialog" aria-modal="true" aria-labelledby="cartTitle" hidden>
+
+    <!-- Затемнение под панелью. Это кнопка, а не div:
+         по Tab на неё можно попасть и закрыть панель,
+         не тянусь мышью к крестику. -->
+    <button class="cart__overlay" id="cartOverlay" type="button" aria-label="Закрыть корзину"></button>
+
+    <!-- Класс .panel общий у корзины и у окна товара: по нему
+         скрипт находит, куда запереть фокус, — и не ищет панель
+         по разным селекторам в двух местах -->
+    <aside class="panel cart__panel">
+      <div class="cart__head">
+        <h2 class="cart__title" id="cartTitle">Корзина</h2>
+        <button class="cart__close" id="cartClose" type="button" aria-label="Закрыть корзину">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M6 6l12 12M18 6L6 18"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Список позиций рисует скрипт -->
+      <div class="cart__items" id="cartItems"></div>
+
+      <!-- Заглушка «в корзине пусто» -->
+      <p class="cart__empty" id="cartEmpty">Пока пусто. Добавь что-нибудь из каталога.</p>
+
+      <div class="cart__foot">
+        <div class="cart__total">
+          <span class="cart__total-label">Итого</span>
+          <span class="cart__total-value" id="cartTotal">0 ₽</span>
+        </div>
+        <button class="btn btn--primary btn--full" id="cartClear" type="button" hidden>
+          Очистить корзину
+        </button>
+      </div>
+    </aside>
+  </div>
+
+
+  <!-- =========================================================
+       ОКНО ТОВАРА
+       Открывается нажатием на рисунок или название карточки.
+       Здесь только рамка и крестик: содержимое (рисунок,
+       описание, характеристики) рисует скрипт из CONFIG —
+       держать его ещё и в разметке значило бы держать
+       описание товара в двух местах.
+       ========================================================= -->
+  <div
+    class="modal"
+    id="productModal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="productModalTitle"
+    hidden
+  >
+
+    <!-- Затемнение под окном — кнопка, а не div: по Tab на
+         неё можно попасть и закрыть окно, не тянусь мышью -->
+    <button
+      class="modal__overlay"
+      id="productModalOverlay"
+      type="button"
+      aria-label="Закрыть окно товара"
+    ></button>
+
+    <div class="panel modal__panel">
+      <div class="modal__head">
+        <h2 class="modal__title" id="productModalTitle"></h2>
+        <button
+          class="modal__close"
+          id="productModalClose"
+          type="button"
+          aria-label="Закрыть окно товара"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M6 6l12 12M18 6L6 18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal__body" id="productModalBody"></div>
+    </div>
+  </div>
+
+
+  <!-- =========================================================
+       ПОДВАЛ
+       ========================================================= -->
+  <footer class="footer">
+    <div class="container footer__inner">
+      <span>&copy; <span id="year">2026</span> Кофейный этаж</span>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

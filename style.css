@@ -1,0 +1,1987 @@
+/* =============================================================
+   0. ПЕРЕМЕННЫЕ ТЕМЫ
+   Собственная палитра магазина: кремовая бумага, тёмный кофе
+   и терракотовый акцент. Намеренно не совпадает с тёмным
+   техно-стилем сайта-визитки — это отдельный проект, а не его
+   раздел, поэтому перекрашивать его под чужую палитру не нужно.
+   ============================================================= */
+:root {
+  /* Тёмная обжаренная палитра: почти чёрный кофе и тёплый
+     янтарный акцент. Магазин намеренно выглядит отдельной
+     витриной, а не разделом сайта-визитки. */
+  --bg: #14100d;
+  --bg-alt: #1c1713;
+  --surface: #221c17;
+  --line: rgba(255, 244, 232, 0.10);
+  --line-strong: rgba(255, 244, 232, 0.26);
+  --text: #f4ece2;
+  --muted: #a08d7c;
+  /* Обжаренный янтарь — единственный цветной акцент темы.
+     На тёмном фоне он светлее, чем был на светлом: тёмная
+     терракота на почти чёрном просто не читается */
+  --accent: #d97a3c;
+  --accent-soft: #2e241c;
+  --on-accent: #1a1410;
+  /* RGB-тройка для rgba() в обложках карточек товаров */
+  --visual-ink: 200, 140, 90;
+
+  /* Оттенки заднего фона. Палитра однотонная не должна:
+     тёплое пятно сверху и холодное снизу держат страницу
+     живой, а акцент остаётся единственным чистым цветом */
+  --glow-warm: 217, 122, 60;
+  --glow-cool: 74, 104, 140;
+  --glow-deep: 92, 46, 24;
+
+  /* Тёплая книжная антиква в заголовках — противоположность
+     техническому гротеску визитки */
+  --font-display: 'Lora', 'Georgia', serif;
+  /* Верхний блок витрины: тонкие засечки и много воздуха */
+  --font-intro: 'Cormorant Garamond', 'Georgia', serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+  --font-body: 'Golos Text', 'Segoe UI', system-ui, -apple-system, sans-serif;
+
+  --container: 1200px;
+  --radius: 14px;
+  --radius-sm: 8px;
+  --header-h: 72px;
+  /* Ширина панели корзины на десктопе */
+  --cart-w: 420px;
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur: 0.4s;
+
+  /* Нативные элементы (выпадающий список, поле поиска, полосы
+     прокрутки) рисуются в тёмной схеме только если браузер так решит.
+     Здесь тема тёмная, поэтому указываем это явно. */
+  color-scheme: dark;
+}
+
+/* =============================================================
+   1. БАЗА / СБРОС
+   ============================================================= */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--header-h) + 20px);
+}
+
+/* Атрибут hidden обязан побеждать любые display из правил ниже.
+   Без этого переключатели на JS не спрячут элементы вроде
+   .qty, у которого в правиле стоит display: inline-flex:
+   авторское правило сильнее браузерного [hidden] и элемент
+   останется на экране */
+[hidden] {
+  display: none !important;
+}
+
+body {
+  font-family: var(--font-body);
+  /* Задний план — четыре слоя. Прежние два пятна были по 5%
+     и держали 0°, поэтому страница читалась как одна ровная
+     заливка. Теперь:
+       — тёплое пятно сверху слева, как свет от лампы;
+       — холодное снизу справа, чтобы тёмный фон не был
+         мёртвым и внизу каталога;
+       — глубокое рыжее пятно в центре, гасящее полосу
+         между шапкой и каталогом;
+       — пятно за подвалом, которое видно в самом низу.
+     Слои пятен вынесены в body::before ниже: они приклеены
+     к экрану и не «плывут» при прокрутке */
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Пятна заднего плана — отдельным слоем, прибитым к экрану.
+
+   Раньше все четыре пятна стояли прямо в фоне body вместе со
+   background-attachment: fixed. Выглядело точно так же, но
+   браузер при каждом кадре прокрутки заново закрашивал четыре
+   больших пятна — это была главная причина лагов.
+
+   Слой с position: fixed отрисовывается один раз, а дальше
+   просто композитится и двигается, не перерисовываясь.
+   z-index: -1 кладёт его под весь контент: у html фона нет,
+   поэтому фон body уходит на холст, и слой виден поверх
+   него. pointer-events: none не даёт ему мешать кликам */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(70rem 48rem at 12% -12%, rgba(var(--glow-warm), 0.16), transparent 60%),
+    radial-gradient(66rem 52rem at 92% 108%, rgba(var(--glow-cool), 0.14), transparent 62%),
+    radial-gradient(48rem 30rem at 50% 34%, rgba(var(--glow-deep), 0.10), transparent 65%),
+    radial-gradient(40rem 26rem at 0% 78%, rgba(var(--glow-warm), 0.06), transparent 60%);
+}
+
+/* Пока открыта панель корзины — страницу нельзя прокручивать
+   под затемнением, иначе она «уезжает» из-под панели */
+body.is-locked {
+  overflow: hidden;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* Видимый фокус — важен для навигации с клавиатуры */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.container {
+  width: min(100% - 40px, var(--container));
+  margin-inline: auto;
+}
+
+/* Ссылка для клавиатуры: прячем не через display: none —
+   иначе она выпала бы из порядка обхода по Tab */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 16px;
+  z-index: 100;
+  padding: 12px 18px;
+  background: var(--accent);
+  color: var(--on-accent);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  text-decoration: none;
+  transition: top 0.25s var(--ease);
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* Подсказка про JavaScript видна только в режиме no-js */
+.nojs-note {
+  display: none;
+  padding: 40px;
+  text-align: center;
+  color: var(--muted);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+}
+
+html.no-js .nojs-note {
+  display: block;
+}
+
+html.no-js .toolbar,
+html.no-js .grid {
+  display: none;
+}
+
+/* =============================================================
+   2. ШАПКА
+   ============================================================= */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(20, 16, 13, 0.86);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+
+/* Шапка: логотип смещён к центру, кнопка корзины остаётся
+   у правого края. Раньше стояло space-between — логотип
+   стоял слева, корзина справа */
+.header__inner {
+  width: min(100% - 40px, var(--container));
+  margin-inline: auto;
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  /* Положение логотипа считается не вручную, а от правого края
+     шапки: слева от него остаётся ровно столько же места,
+     сколько справа от центра, поэтому он стоит по центру,
+     а корзина сдвигается следом за ним */
+  padding-left: calc(50% - 0.5 * var(--container) + 100px);
+}
+
+/* На телефоне логотип возвращается влево: при 390px ширины
+   такой отступ прижал бы его вплотную к краю */
+@media (max-width: 1200px) {
+  .header__inner {
+    padding-left: 0;
+  }
+}
+
+.header__logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  /* Тот же шрифт, что и в верхнем блоке: название магазина
+     и заголовок страницы должны звучать одним голосом */
+  font-family: var(--font-intro);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.header__logo-mark {
+  color: var(--accent);
+  display: inline-flex;
+}
+
+/* Значок зерна держим пропорциональным надписи: раньше он был
+   рассчитан на кегль 0.95rem и при 1.15rem смотрелся мелко */
+.header__logo-mark svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* =============================================================
+   3. КНОПКА КОРЗИНЫ
+   Счётчик — отдельный элемент, а не псевдоэлемент: значение
+   приходит из скрипта, псевдоэлементом его не задать.
+   ============================================================= */
+.cart-btn {
+  position: relative;
+  /* Прижимает кнопку к правому краю: логотип сдвинут влево
+     отступом на .header__inner, а корзина уходит вправо */
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  transition: border-color 0.3s var(--ease), background 0.3s var(--ease);
+}
+
+.cart-btn:hover {
+  border-color: var(--line-strong);
+  background: var(--bg-alt);
+}
+
+.cart-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.cart-btn__count {
+  min-width: 20px;
+  padding: 1px 6px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-align: center;
+  color: var(--on-accent);
+  background: var(--accent);
+  border-radius: 100px;
+  transition: opacity 0.3s var(--ease);
+}
+
+/* Когда корзина пуста — счётчик не показываем, а не рисуем
+   серым кружком: он тянул бы взгляд на пустое место */
+.cart-btn__count[data-empty='true'] {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* =============================================================
+   4. ЗАГОЛОВОК ВИТРИНЫ
+   ============================================================= */
+.intro {
+  position: relative;
+  padding-block: clamp(56px, 9vw, 104px) clamp(32px, 5vw, 56px);
+  /* Подсветка гаснет к низу — за блоком остаётся ровный фон */
+  background: linear-gradient(180deg, rgba(181, 70, 31, 0.07) 0%, transparent 100%);
+}
+
+/* Штриховка под 45° живёт только в этом блоке и уходит вниз.
+   Отдельный слой, а не фон самого .intro, потому что гасить
+   надо узор, а не содержимое: mask на .intro погасил бы
+   вместе с линиями и заголовок с подписью.
+
+   repeating-linear-gradient рисует полосы сам, ключ повтора —
+   прозрачная полоса в том же направлении: 1px линия, 7px
+   паузы. На тёмном фоне 0.035 — это зерно, а не полосы */
+.intro::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(255, 244, 232, 0.035) 0 1px,
+    transparent 1px 8px
+  );
+  /* Узор держится ровно до середины блока, потом гаснет.
+     -webkit- нужен для Safari, у него ещё свой префикс
+     у mask-image */
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 42%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 42%, transparent 100%);
+}
+
+.intro__label {
+  display: inline-block;
+  font-family: var(--font-intro);
+  /* У тонкой антиквы очень светлые штрихи: на кегле 0.78rem
+     моноширинный вариант читался, а Cormorant на этом размере
+     почти пропадает. Поэтому надпись крупнее и плотнее */
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+
+.intro__title {
+  font-family: var(--font-intro);
+  /* Шрифт заметно мельче нынешнего гротеска при том же кегле,
+     поэтому заголовок вырос — иначе он проиграет мелкой надписи */
+  font-size: clamp(2.4rem, 5.8vw, 3.8rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  /* Ширина задана в ch, но у антиквы ch заметно уже, чем у
+     гротеска, на котором это значение писалось изначально:
+     фраза переносилась на «кофе» и вторая строка оставалась
+     из одного слова. Ниже порога в одну строку не влезает,
+     поэтому вторая строка остаётся осмысленной */
+  max-width: 22ch;
+}
+
+.intro__text {
+  margin-top: 18px;
+  /* Ширины хватает, чтобы строка легла целиком на широком экране:
+     при 56ch фраза рвалась на две строки, и вторая выходила
+     короткой — некрасивый перенос. На телефоне перенос останется */
+  max-width: 72ch;
+  color: var(--muted);
+  font-family: var(--font-intro);
+  font-size: 1.4rem;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+/* Блок по центру. Заголовок и текст — блоки с ограниченной
+   шириной, поэтому выравнивания по центру страницы на них
+   самого по себе не действует: каждый нужно сдвинуть
+   вставкой margin. Подпись — строчный элемент, ей хватает
+   text-align от родителя */
+.intro .container {
+  text-align: center;
+}
+
+.intro__title,
+.intro__text {
+  margin-inline: auto;
+}
+
+/* =============================================================
+   5. ПАНЕЛЬ ФИЛЬТРОВ
+   ============================================================= */
+.toolbar {
+  position: sticky;
+  top: var(--header-h);
+  z-index: 15;
+  padding-block: 16px;
+  background: rgba(20, 16, 13, 0.92);
+  backdrop-filter: blur(12px);
+  border-block: 1px solid var(--line);
+  /* Плавное складывание и уезжание: без перехода панель не
+     «собирается», а скачком меняет высоту или дёргается вверх */
+  transition: padding-block 0.28s var(--ease), transform 0.32s var(--ease);
+}
+
+/* Панель уехала вверх при листании вниз.
+
+   Сдвиг на всю высоту панели плюс шапка: панель липкая и стоит
+   на top: var(--header-h), поэтому одного -100% не хватало —
+   её нижний край остался бы под шапкой и проглядывал.
+
+   visibility — не украшение. Элемент, уехавший за экран, но
+   остающийся видимым, продолжает попадать в порядок обхода по
+   Tab: фокус встал бы в невидимую строку поиска. Задержка в
+   0.32s равна длине перехода, поэтому панель спокойно уезжает
+   и лишь потом пропадает из обхода. На появлении задержка не
+   действует, и панель возвращается вместе с анимацией */
+.toolbar.is-hidden {
+  transform: translateY(calc(-100% - var(--header-h) - 1px));
+  visibility: hidden;
+  transition: transform 0.32s var(--ease), visibility 0s linear 0.32s;
+}
+
+/* Панель фильтров в две строки: сверху поиск по центру,
+   под ним категории слева и сортировка справа */
+.toolbar__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  transition: gap 0.28s var(--ease);
+}
+
+.toolbar__row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.toolbar__group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: gap 0.28s var(--ease);
+}
+
+.toolbar__label,
+.search__label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  transition: font-size 0.28s var(--ease);
+}
+
+/* Поиск. Метка на виду, а не только для скринридера:
+   подписью поля пользуются все, а не единицы. */
+.search {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 560px;
+  /* Поиск — главный элемент панели, поэтому он по центру */
+  margin-inline: auto;
+  text-align: center;
+  transition: gap 0.28s var(--ease);
+}
+
+.search__input {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  /* padding тоже в переходе: он меняется при складывании */
+  transition: border-color 0.3s var(--ease), padding 0.28s var(--ease);
+}
+
+.search__input::placeholder {
+  color: var(--muted);
+}
+
+.search__input:focus {
+  border-color: var(--line-strong);
+}
+
+/* Категории — «чипы» */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Категории — пилюли без рамок: пять рамок подряд читались
+   как «забор» и спорили с фотографиями товаров. Рамка
+   возвращается только при наведении, когда человек уже
+   наводит на кнопку и видит, что она нажимается */
+.chip {
+  padding: 10px 18px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--muted);
+  border: 1px solid transparent;
+  border-radius: 100px;
+  white-space: nowrap;
+  /* padding, font-size и box-shadow меняются при складывании —
+     без них кнопки прыгали бы вместо плавного сжатия */
+  transition: color 0.3s var(--ease), background 0.3s var(--ease),
+    border-color 0.3s var(--ease), transform 0.2s var(--ease),
+    padding 0.28s var(--ease), font-size 0.28s var(--ease),
+    box-shadow 0.28s var(--ease);
+}
+
+/* Подложка на неактивных кнопках едва различима: она нужна,
+   чтобы ряд не выглядел повисшим в воздухе, но не спорить
+   с фотографиями ниже */
+.chip:hover {
+  color: var(--text);
+  background: rgba(var(--visual-ink), 0.10);
+  border-color: var(--line);
+}
+
+.chip:active {
+  transform: scale(0.96);
+}
+
+/* Выбранная категория — самое заметное место в панели
+   фильтров: заливка акцентом, увеличенный кегль и мягкое
+   свечение наружу. Одной заливки не хватало — на тёмном фоне
+   оранжевый без свечения сливается с фотографиями ниже */
+.chip.is-active {
+  color: var(--on-accent);
+  background: var(--accent);
+  border-color: var(--accent);
+  font-weight: 700;
+  font-size: 0.88rem;
+  padding: 11px 22px;
+  box-shadow: 0 0 0 4px rgba(var(--visual-ink), 0.14), 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+/* При появлении заливки кнопка не должна «прыгнуть» влево:
+   рамка есть всегда, просто у неактивных она прозрачная */
+.chip.is-active:hover {
+  color: var(--on-accent);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Фокус с клавиатуры рамкой — иначе на активной кнопке
+   фокус не видно вовсе: заливка уже есть, а менять её
+   на выбранном состоянии нельзя */
+.chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Выпадающий список сортировки.
+
+   Раньше здесь стоял системный <select>. Его подкрасить можно
+   было, но раскрытое меню рисует операционная система, а на неё
+   не действуют ни цвет, ни шрифт, ни рамка — отсюда и чужой вид.
+   Теперь список собственный, и оформлен он вместе с кнопкой */
+.select {
+  position: relative;
+}
+
+.select__control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  padding: 11px 16px;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--text);
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  /* Мягкая подложка поднимается при наведении и при фокусе:
+     без неё кнопка выглядит вдавленной в панель, а не
+     нарисованной поверх неё */
+  transition: border-color 0.28s var(--ease), padding 0.28s var(--ease),
+    background 0.28s var(--ease), box-shadow 0.28s var(--ease);
+}
+
+.select__control:hover {
+  border-color: var(--line-strong);
+}
+
+.select__control:focus-visible {
+  outline: none;
+  border-color: var(--line-strong);
+  box-shadow: 0 0 0 3px rgba(var(--visual-ink), 0.18);
+}
+
+/* Открытый список держит то же кольцо. Иначе панель выглядит
+   оторванной от кнопки, из которой выпала */
+.select.is-open .select__control {
+  border-color: var(--line-strong);
+  box-shadow: 0 0 0 3px rgba(var(--visual-ink), 0.18);
+}
+
+.select__arrow {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+  /* Стрелка переворачивается на 180°, когда список открыт:
+     направление и состояние читаются одним движением */
+  transition: transform 0.3s var(--ease), color 0.3s var(--ease);
+}
+
+.select.is-open .select__arrow {
+  transform: rotate(180deg);
+  color: var(--accent);
+}
+
+/* Сам список. Панель выше кнопки, а не рядом с ней: сбоку
+   не поместилось бы, и варианты уезжали бы за край экрана */
+.select__list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  padding: 5px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  /* Тень отделяет панель от кнопки под ней: без неё список
+     читается как продолжение плашки, а не как то, что
+     нависает поверх */
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+  animation: selectIn 0.2s var(--ease);
+}
+
+@keyframes selectIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.select__option {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: calc(var(--radius-sm) - 2px);
+  cursor: pointer;
+  transition: background 0.2s var(--ease), color 0.2s var(--ease);
+}
+
+.select__option:hover {
+  color: var(--text);
+  background: rgba(var(--visual-ink), 0.10);
+}
+
+.select__option:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* Выбранный вариант отмечен точкой акцентом. Одного выделения
+   цветом мало: при открытом списке «выбрано сейчас» и «наведён»
+   выглядят одинаково, и человек не понимает, что уже применено */
+.select__option::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  margin-left: auto;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 0.2s var(--ease);
+}
+
+.select__option[aria-selected='true'] {
+  color: var(--text);
+}
+
+.select__option[aria-selected='true']::after {
+  opacity: 1;
+}
+
+/* =============================================================
+   5.1 ПАНЕЛЬ, СЛОЖЕННАЯ ПРИ ПРОКРУТКЕ
+
+   Класс .is-compact ставит скрипт, когда страница прокручена
+   мимо верхнего края панели. Зачем: панель липкая, то есть
+   висит перед глазами всё время, пока листают каталог, и на
+   телефоне отнимает ощутимую часть экрана. Сложившись, она
+   отдаёт карточкам около 40px и перестаёт спорить с фотографиями.
+
+   Подписи «Поиск», «Категория» и «Сортировка» остаются: они не
+   украшение. «Поиск» держит имя поля для скринридера,
+   «Категория» подписана к группе кнопок через aria-labelledby,
+   а «Сортировка» привязана к <select>. Спрятать их — значит
+   оставить поле без названия. Поэтому ужимаем расстояния,
+   а не содержимое */
+.toolbar.is-compact {
+  padding-block: 10px;
+}
+
+.toolbar.is-compact .toolbar__inner {
+  gap: 10px;
+}
+
+.toolbar.is-compact .search {
+  gap: 4px;
+}
+
+.toolbar.is-compact .search__input {
+  padding: 8px 14px;
+}
+
+.toolbar.is-compact .toolbar__group {
+  gap: 4px;
+}
+
+.toolbar.is-compact .toolbar__label,
+.toolbar.is-compact .search__label {
+  font-size: 0.66rem;
+}
+
+.toolbar.is-compact .chip {
+  padding: 7px 14px;
+  font-size: 0.75rem;
+}
+
+/* У активной категории свои размеры, и без отдельной строки она
+   после сжатия осталась бы крупнее соседних кнопок — то есть
+   «выбор» перестал бы читаться с одного взгляда */
+.toolbar.is-compact .chip.is-active {
+  font-size: 0.82rem;
+  padding: 8px 17px;
+  box-shadow: 0 0 0 3px rgba(var(--visual-ink), 0.14), 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Стрелка переехала внутрь кнопки, поэтому отступ справа
+   теперь обычный, а не с запасом на иконку */
+.toolbar.is-compact .select__control {
+  padding: 8px 14px;
+}
+
+/* =============================================================
+   6. СТРОКА РЕЗУЛЬТАТА
+   role="status" в разметке: скринридер читает её вслух,
+   когда фильтры перерисовали каталог
+   ============================================================= */
+.result-line {
+  padding-block: 28px 20px;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+/* =============================================================
+   7. СЕТКА И КАРТОЧКА ТОВАРА
+   ============================================================= */
+.catalog {
+  /* isolation создаёт свой слой раскладки. Без него снимок
+     с z-index: -1 уехал бы под фон самого body и стал бы
+     невидимым — это самая частая ошибка с фоновыми слоями */
+  isolation: isolate;
+  position: relative;
+}
+
+/* Фоновая фотография кофейни за каталогом.
+   Снимок намеренно «разобран» до неузнаваемости:
+     — тёмная вуаль поверх снимка гасит надпись на стене
+       и рамки с кофе, иначе они читались бы как вторые,
+       фальшивые карточки;
+     — opacity держит фото тише пятнадцати снимков товаров:
+       фон должен уступать, а не спорить;
+     — маска по краям убирает светлую кромку на границе
+       элемента и растворяет фотографию в фоне страницы.
+
+   Отдельный слой, а не background у .catalog: карточки
+   лежат в потоке, и фон на самой секции оказался бы под
+   ними — а так он гарантированно под всем содержимым */
+.catalog::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  /* Подложка шире секции на всё окно. Иначе фото некуда деться:
+     карточки занимают контейнер целиком, между ними щель 20px,
+     и снимку просто негде показаться. За полями страницы
+     (при 1440 это по 120px с каждой стороны) он наконец виден */
+  left: 50%;
+  width: 100vw;
+  transform: translateX(-50%);
+  /* Поверх снимка — своя тёмная вуаль, ровно как на обложках
+     карточек.
+
+     Раньше вместо неё стоял filter: blur(4px) brightness(1.3):
+     размытие нужно было, чтобы стереть надпись на стене. Но
+     слой высотой во весь каталог — на 1440px это примерно
+     1400×2600 пикселей — и blur на такой площади браузер
+     считает очень тяжело. Это вторая причина лагов. Вуаль из
+     градиента даёт тот же результат бесплатно: это просто
+     цвет, а не обработка каждого пикселя.
+
+     Сам снимок почти чёрный, поэтому opacity поднят с 0.42 до
+     0.55 — раньше его подсвечивал brightness(1.3), который мы
+     убрали. Если фон покажется слишком заметным или слишком
+     незаметным, крутится ровно это число */
+  background:
+    linear-gradient(rgba(20, 16, 13, 0.28), rgba(20, 16, 13, 0.52)),
+    url('images/cafe-bg.jpg') center / cover no-repeat;
+  opacity: 0.55;
+  /* Гасим только верх и низ — на стыках с панелью фильтров и
+     подвалом. По бокам маска не нужна: там фото как раз и
+     должно быть видно */
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 10%, #000 86%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 10%, #000 86%, transparent 100%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  padding-bottom: clamp(56px, 8vw, 96px);
+}
+
+.product {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease),
+    transform var(--dur) var(--ease);
+}
+
+.product:hover {
+  border-color: var(--line-strong);
+  transform: translateY(-4px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* Обложка: два размытых пятна, как на карточках проектов
+   в портфолио. Файлов-картинок в проекте нет вообще — предметы
+   нарисованы контурами прямо в script.js. */
+.product__visual {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  display: grid;
+  place-items: center;
+  /* Обложка осталась прежней: у всех товаров есть фотография,
+     а она ложится сверху и всё равно скрывает этот фон */
+  background:
+    radial-gradient(circle at var(--p1, 30% 30%), rgba(var(--visual-ink), 0.30) 0%, transparent 55%),
+    radial-gradient(circle at var(--p2, 70% 70%), rgba(var(--visual-ink), 0.10) 0%, transparent 55%),
+    var(--bg-alt);
+  border-bottom: 1px solid var(--line);
+  overflow: hidden;
+}
+
+/* Фотография товара — размытым фоном под рисунком.
+
+   Класс .has-photo ставит скрипт, только если у товара есть
+   поле photo. Без него псевдоэлемент не создан вовсе, и
+   обложка остаётся прежней, цветной.
+
+   Фото уходит в три приёма сразу, иначе оно перетянет
+   внимание с рисунка и с названием товара:
+     — размытием, чтобы не спорить с контуром;
+     — затемняющим слоем, чтобы белые подписи и цена
+       не потерялись на светлом снимке;
+     — размером чуть больше обложки, иначе размытие
+       заметно съедало бы края. */
+.product__visual.has-photo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  /* Путь приходит из данных, поэтому через переменную */
+  background-image:
+    linear-gradient(rgba(20, 16, 13, 0.55), rgba(20, 16, 13, 0.78)),
+    var(--photo);
+  background-size: cover;
+  /* Кадр смещён вниз: зёрна и блики в нижней трети,
+     а сверху только пустой тёмный фон */
+  background-position: center 72%;
+  /* Здесь стоял filter: blur(0.5px) saturate(0.9). Полпикселя
+     размытия глазом не видно, но любой filter заставляет
+     браузер завести отдельный слой и прогнать его через
+     обработку. А таких обложек на странице пятнадцать, и
+     каждая перерисовывается вместе с сеткой при каждом
+     нажатии в поиске. Обложки и так приглушены вуалью выше,
+     поэтому фильтр убран, а scale(1.02) оставлен: он двигает
+     готовый слой, не перерисовывая его */
+  transform: scale(1.02);
+  /* Фотография — фон, а не передний план. Без явного
+     z-index псевдоэлемент рисуется поверх обычного
+     содержимого и накрывает собой рисунок */
+  z-index: 0;
+  pointer-events: none;
+}
+
+.product__visual.has-photo > .product__glyph {
+  position: relative;
+  z-index: 1;
+}
+
+/* При наведении рисунок не только растёт, но и теплеет:
+   цвет идёт к акценту — карточка отзывается тем же тоном,
+   которым нарисованы пятна на обложке */
+.product__glyph {
+  color: var(--text);
+  transition: transform 0.5s var(--ease), color 0.35s var(--ease);
+}
+
+.product__glyph svg {
+  width: 112px;
+  height: 112px;
+}
+
+/* Поворот, который был у прежних значков, на крупной
+   иллюстрации читается как сбой — оставляем только рост */
+.product:hover .product__glyph {
+  color: var(--accent);
+  transform: scale(1.06);
+}
+
+.product__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  flex: 1;
+}
+
+.product__cat {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.product__name {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Название — ссылка, но выглядит как заголовок. Синий
+   подчёркнутый текст посреди тёмной витрины выглядел бы
+   чужеродно, поэтому цвет наследуется, а подчёркивание
+   появляется только при наведении */
+.product__name a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.product__name a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.product__note {
+  font-size: 0.88rem;
+  color: var(--muted);
+  flex: 1;
+}
+
+/* Блок покупки прижат к низу, чтобы цены в ряду стояли
+   на одной высоте независимо от длины описания */
+.product__buy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.product__price {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Блок покупки: кнопка «В корзину» или счётчик количества.
+   Общий у карточки и окна товара — обе разметки строит
+   одна функция createBuyBlock */
+.buy {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.buy__add {
+  padding: 10px 18px;
+  white-space: nowrap;
+}
+
+/* Счётчик внутри блока покупки не нужен отступ сверху —
+   его задаёт сетка позиции корзины, а здесь он лишний */
+.buy .qty {
+  margin-top: 0;
+}
+
+/* =============================================================
+   8. КНОПКИ
+   ============================================================= */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  transition: background 0.3s var(--ease), color 0.3s var(--ease),
+    border-color 0.3s var(--ease), transform 0.2s var(--ease);
+}
+
+.btn--primary {
+  color: var(--on-accent);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.btn--primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(181, 70, 31, 0.28);
+}
+
+.btn--sm {
+  padding: 10px 16px;
+  font-size: 0.8rem;
+}
+
+.btn--full {
+  width: 100%;
+}
+
+.btn--ghost:hover {
+  border-color: var(--line-strong);
+  background: var(--bg-alt);
+}
+
+/* Кнопка добавления — компактная, помещается в блок покупки */
+.product__add {
+  padding: 9px 14px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text);
+  border: 1px solid var(--line-strong);
+  border-radius: 100px;
+  white-space: nowrap;
+  transition: background 0.3s var(--ease), color 0.3s var(--ease),
+    border-color 0.3s var(--ease);
+}
+
+.product__add:hover {
+  color: var(--on-accent);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Товар уже в корзине — кнопка становится тише и показывает,
+   что нажатие состоялось, а не потерялось */
+.product__add.is-added {
+  color: var(--muted);
+  border-color: var(--line);
+  background: var(--bg-alt);
+}
+
+/* =============================================================
+   9. ПУСТОЕ СОСТОЯНИЕ КАТАЛОГА
+   ============================================================= */
+.empty {
+  padding: clamp(48px, 9vw, 88px) 24px;
+  text-align: center;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  margin-bottom: clamp(56px, 8vw, 96px);
+}
+
+.empty__title {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.empty__text {
+  color: var(--muted);
+}
+
+/* =============================================================
+   10. ПАНЕЛЬ КОРЗИНЫ
+   ============================================================= */
+.cart {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+
+.cart[hidden] {
+  display: none;
+}
+
+.cart__overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.65);
+  cursor: pointer;
+}
+
+.cart__panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(100%, var(--cart-w));
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-alt);
+  border-left: 1px solid var(--line);
+  animation: cartIn var(--dur) var(--ease);
+}
+
+/* Панель выезжает справа. Появление — анимация, а не display:
+   без неё переход был бы мгновенным и выглядел бы как сбой */
+@keyframes cartIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.cart__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.cart__title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.cart__close {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  transition: color 0.3s var(--ease), border-color 0.3s var(--ease);
+}
+
+.cart__close:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+
+.cart__close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.cart__items {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 24px;
+}
+
+.cart__empty {
+  padding: 24px;
+  color: var(--muted);
+}
+
+.cart__empty[hidden] {
+  display: none;
+}
+
+.cart__foot {
+  padding: 20px 24px 24px;
+  border-top: 1px solid var(--line);
+}
+
+.cart__total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.cart__total-label {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.cart__total-value {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.cart__note {
+  margin-bottom: 16px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.cart__foot .btn[hidden] {
+  display: none;
+}
+
+/* ---- Позиция в корзине ----
+   Имена областей вместо grid-column по номерам: сетка из трёх
+   строк читается целиком в одном месте, и элементы не могут
+   случайно наехать друг на друга при перестановке. */
+.cart-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'name  price'
+    'note  note'
+    'qty   remove';
+  gap: 6px 14px;
+  padding-block: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.cart-item:last-child {
+  border-bottom: none;
+}
+
+.cart-item__name {
+  grid-area: name;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.cart-item__price {
+  grid-area: price;
+  justify-self: end;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.cart-item__note {
+  grid-area: note;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* Счётчик количества: три кнопки в ряд через общий счётчик */
+.qty {
+  grid-area: qty;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 6px;
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  justify-self: start;
+}
+
+.qty__btn {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  color: var(--muted);
+  border-radius: 50%;
+  transition: color 0.2s var(--ease), background 0.2s var(--ease);
+}
+
+.qty__btn:hover {
+  color: var(--text);
+  background: var(--bg-alt);
+}
+
+.qty__btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.qty__btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.qty__value {
+  min-width: 26px;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.cart-item__remove {
+  grid-area: remove;
+  align-self: center;
+  justify-self: end;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.2s var(--ease);
+}
+
+.cart-item__remove:hover {
+  color: var(--text);
+}
+
+/* =============================================================
+   11. ОКНО ТОВАРА
+
+   Корзина и окно товара — два разных окна, но механика у них
+   одна: запирают страницу, ловят фокус и закрываются по Escape.
+   Поэтому оформлены по одному правилу (флекс-центрирование),
+   а различаются только размерами и появлением.
+   ============================================================= */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.modal[hidden] {
+  display: none;
+}
+
+.modal__overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  cursor: pointer;
+}
+
+.modal__panel {
+  position: relative;
+  width: min(100%, 620px);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-alt);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  animation: modalIn var(--dur) var(--ease);
+}
+
+/* Окно слегка поднимается и проявляется. Без анимации
+   появление было бы мгновенным и выглядело бы как сбой */
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.modal__title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.modal__close {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  transition: color 0.3s var(--ease), border-color 0.3s var(--ease);
+}
+
+.modal__close:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+
+.modal__close svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Тело прокручивается, а шапка с крестиком остаётся на месте:
+   при длинном описании крестик не уезжал бы за экран */
+.modal__body {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+/* В окне рисунок шире, чем на карточке: 4:3 здесь съедал бы
+   почти всю высоту, и характеристики не поместились бы */
+.modal__body .product__visual {
+  aspect-ratio: 2.4 / 1;
+}
+
+.modal__body .product__glyph svg {
+  width: 104px;
+  height: 104px;
+}
+
+.modal__text {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+}
+
+.modal__note {
+  font-size: 0.95rem;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+/* Характеристики — список «пара: значение» в две колонки.
+   dt и dd разложены по колонкам, поэтому подпись всегда
+   на одной вертикали со значением, а само значение
+   прижато вправо и не растягивает строку */
+.specs {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.specs dt {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  align-self: center;
+}
+
+.specs dd {
+  font-size: 0.9rem;
+  text-align: right;
+}
+
+.modal__buy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px 24px;
+  border-top: 1px solid var(--line);
+}
+
+.modal__price {
+  font-family: var(--font-mono);
+  font-size: 1.3rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+
+/* =============================================================
+   12. ПОДВАЛ
+   ============================================================= */
+.footer {
+  border-top: 1px solid var(--line);
+  padding-block: 32px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* Подпись в подвале — одна строка, и центрировать её проще
+   всего обычным text-align: он центрует сам текст внутри
+   блока, независимо ни от чего.
+
+   Раньше здесь стоял flex с justify-content: center — работало
+   так же, но он был рассчитан на несколько элементов в строке
+   (ради этого и был gap: 20px). Сейчас в подвале ровно один
+   элемент, и flex только мешает: стоит добавить второй — и
+   подпись снова уедет из центра.
+
+   Рядом был ещё класс .footer__muted, но он не встречается ни
+   в разметке, ни в скрипте: остался от прежней вёрстки, где
+   в подвале была вторая строка. Удалён вместе с flex */
+.footer__inner {
+  text-align: center;
+}
+
+/* =============================================================
+   13. АДАПТИВ
+   ============================================================= */
+
+/* Четыре карточки в ряд на 1200px дают по 285px — описанию тесно.
+   Ниже 1200px переходим на 2x2. */
+@media (max-width: 1200px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  /* На телефоне фильтры идут обычным потоком: поиск и сортировка
+     получают всю доступную ширину, а панель не перекрывает каталог. */
+  .toolbar {
+    position: static;
+    padding-block: 14px;
+  }
+
+  .toolbar__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .toolbar__group,
+  .toolbar__group .select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .search {
+    max-width: none;
+  }
+
+  /* Категории прокручиваются горизонтально, а не сжимаются
+     в несколько тесных строк. У каждой кнопки удобная высота. */
+  .chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 2px 2px 8px;
+    margin-inline: -2px;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+
+  .chip {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding-inline: 14px;
+  }
+
+  .chip.is-active {
+    padding-inline: 16px;
+  }
+
+  .select__control {
+    width: 100%;
+    min-height: 46px;
+  }
+
+  /* На мобильном скролле панель не должна уезжать за экран. */
+  .toolbar.is-hidden {
+    transform: none;
+    visibility: visible;
+    transition: none;
+  }
+
+  .toolbar.is-compact {
+    padding-block: 14px;
+  }
+
+  .toolbar.is-compact .toolbar__inner {
+    gap: 14px;
+  }
+
+  .toolbar.is-compact .search,
+  .toolbar.is-compact .toolbar__group {
+    gap: 8px;
+  }
+
+  .toolbar.is-compact .search__input,
+  .toolbar.is-compact .select__control {
+    padding: 12px 16px;
+  }
+
+  .toolbar.is-compact .toolbar__label,
+  .toolbar.is-compact .search__label {
+    font-size: 0.72rem;
+  }
+
+  .toolbar.is-compact .chip {
+    min-height: 44px;
+    padding: 10px 14px;
+    font-size: 0.78rem;
+  }
+
+  .toolbar.is-compact .chip.is-active {
+    padding: 10px 16px;
+    font-size: 0.82rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    width: calc(100% - 28px);
+  }
+
+  .header__inner {
+    width: calc(100% - 28px);
+    gap: 10px;
+  }
+
+  .header__logo {
+    gap: 7px;
+    font-size: 1.2rem;
+  }
+
+  .cart-btn {
+    min-height: 44px;
+    padding: 8px 12px;
+  }
+
+  .intro {
+    padding-block: 42px 30px;
+  }
+
+  .intro__title {
+    font-size: clamp(1.9rem, 8vw, 2.3rem);
+  }
+
+  .intro__text {
+    margin-top: 12px;
+    font-size: 1.15rem;
+  }
+
+  /* Две колонки вместо трёх: карточки остаются читаемыми,
+     а цена и кнопка больше не превращаются в микротекст. */
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .product {
+    min-width: 0;
+  }
+
+  .product__visual {
+    aspect-ratio: 4 / 3;
+  }
+
+  .product__glyph svg {
+    width: 68px;
+    height: 68px;
+  }
+
+  .product__body {
+    min-width: 0;
+    gap: 7px;
+    padding: 12px;
+  }
+
+  .product__cat {
+    display: none;
+  }
+
+  .product__name {
+    min-width: 0;
+    font-size: 0.98rem;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+  }
+
+  .product__note {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 0.78rem;
+    line-height: 1.4;
+  }
+
+  .product__buy {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 9px;
+    margin-top: auto;
+    padding-top: 10px;
+  }
+
+  .product__price {
+    font-size: 0.9rem;
+    text-align: left;
+  }
+
+  .buy {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .buy__add {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 6px;
+    font-size: 0.78rem;
+    white-space: normal;
+  }
+
+  /* У счётчика остаются достаточно крупные зоны нажатия,
+     но он помещается даже в узкой карточке телефона. */
+  .qty {
+    max-width: 100%;
+    margin-inline: auto;
+  }
+
+  .qty__btn {
+    width: 36px;
+    min-width: 36px;
+    height: 40px;
+  }
+
+  .qty__value {
+    min-width: 26px;
+    font-size: 0.82rem;
+  }
+
+  /* Корзина учитывает динамическую высоту мобильного браузера
+     и безопасные зоны экранов с вырезами. */
+  .cart__panel {
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  .cart__head {
+    padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
+  }
+
+  .cart__items {
+    min-height: 0;
+    padding-inline: 16px;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .cart__foot {
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+  }
+
+  /* Окно товара занимает реальную высоту видимой области,
+     а прокручивается только его содержимое. */
+  .modal {
+    padding: 0;
+    place-items: stretch;
+  }
+
+  .modal__panel {
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
+    min-height: 0;
+    border: none;
+    border-radius: 0;
+  }
+
+  .modal__head {
+    flex: 0 0 auto;
+    gap: 12px;
+    padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
+  }
+
+  .modal__title {
+    min-width: 0;
+    font-size: 1.05rem;
+    overflow-wrap: anywhere;
+  }
+
+  .modal__close {
+    width: 44px;
+    height: 44px;
+  }
+
+  .modal__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .modal__body .product__visual {
+    flex: 0 0 auto;
+    height: clamp(180px, 30dvh, 260px);
+    aspect-ratio: auto;
+  }
+
+  .modal__body .product__glyph svg {
+    width: 88px;
+    height: 88px;
+  }
+
+  .modal__text {
+    gap: 16px;
+    padding: 18px 16px;
+  }
+
+  .specs {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    gap: 9px 12px;
+  }
+
+  .specs dt {
+    font-size: 0.68rem;
+    overflow-wrap: anywhere;
+  }
+
+  .specs dd {
+    font-size: 0.85rem;
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+
+  .modal__buy {
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .modal__price {
+    font-size: 1.15rem;
+  }
+
+  .modal__buy .buy {
+    flex: 1 1 100%;
+  }
+
+  .modal__buy .buy__add {
+    min-height: 46px;
+  }
+
+  .modal__buy .qty {
+    width: 100%;
+    justify-content: space-between;
+    margin: 0;
+  }
+
+  .footer {
+    padding-block: 24px;
+  }
+}
+
+@media (max-width: 360px) {
+  .header__logo {
+    font-size: 1.08rem;
+  }
+
+  .cart-btn {
+    padding-inline: 9px;
+  }
+
+  .product__body {
+    padding: 10px;
+  }
+
+  .product__name {
+    font-size: 0.9rem;
+  }
+
+  .product__note {
+    font-size: 0.74rem;
+  }
+
+  .specs {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  .specs dd {
+    margin-bottom: 6px;
+  }
+}
+
+/* =============================================================
+   14. ДОСТУПНОСТЬ: УМЕНЬШЕННАЯ АНИМАЦИЯ
+   Движение здесь декоративное, поэтому при таком режиме
+   выезжающая панель поляется обычным блоком без движения, а карточки и кнопки не прыгают при наведении. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .product,
+  .product:hover,
+  .btn--primary:hover,
+  .product__add:hover {
+    transform: none;
+  }
+}
